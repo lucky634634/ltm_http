@@ -4,7 +4,7 @@ LFLAGS = -g -Wall
 
 SRCS = main.cpp http_get.cpp
 OBJS = main.o http_get.o
-EXE = 21127077_21127409
+EXE = 21127077_21127409_21127199
 BUILD_DIR = .
 
 all: $(OBJS)
