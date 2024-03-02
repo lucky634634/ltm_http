@@ -1,2 +1,4 @@
 *.o
 src/21127077_21127409
+src/output/**
+src/build
