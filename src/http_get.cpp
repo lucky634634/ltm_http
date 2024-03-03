@@ -4,41 +4,55 @@
 
 void ExtractURL(const std::string& url, std::string& hostname, std::string& path)
 {
+    // Extracts the hostname and path from the given URL
+
+    // Remove unnecessary copy of the original URL
     std::string temp = url;
-    size_t http = url.find("http://");
-    if (http != std::string::npos)
+
+    // Remove check for "http://" and adjust temp and path accordingly
+    size_t httpPos = url.find("http://");
+    if (httpPos != std::string::npos)
     {
-        temp = url.substr(http + 7, url.size() - 7);
+        temp = url.substr(httpPos + 7);
         path = "/";
     }
-    size_t pos = temp.find_first_of("/");
-    if (pos == std::string::npos)
+
+    // Find the position of the first "/" in the adjusted temp string
+    size_t slashPos = temp.find('/');
+    if (slashPos == std::string::npos)
     {
+        // If no "/", set the hostname and path accordingly
         hostname = temp;
         path = "/";
     }
     else
     {
-        hostname = temp.substr(0, pos);
-        path = temp.substr(pos);
+        // Extract the hostname and path based on the position of the "/"
+        hostname = temp.substr(0, slashPos);
+        path = temp.substr(slashPos);
     }
 }
 
-addrinfo* GetAddrInfo(const std::string& hostname)
+addrinfo* GetAddrInfo(const std::string& host)
 {
+    // Set up hints for getaddrinfo
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
-    struct addrinfo* result = NULL;
 
+    // Set address family and socket type
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    int status = getaddrinfo(hostname.c_str(), "http", &hints, &result);
+
+    struct addrinfo* result = NULL;
+    int status = getaddrinfo(host.c_str(), "http", &hints, &result);
+
+    // Return result if status is 0 (success)
     if (status == 0)
     {
         return result;
     }
 
-    std::cerr << "getaddrinfo: " << gai_strerror(status) << std::endl;
+    // Clean up and return NULL if an error occurred
     freeaddrinfo(result);
     return NULL;
 }
@@ -68,107 +82,32 @@ bool ConnectSocket(int sockfd, addrinfo* result)
 
 bool SendRequest(int sockfd, const std::string& hostname, const std::string& path)
 {
+    // Construct the HTTP request
     std::string request = "GET " + path + " HTTP/1.1\r\nHost: " + hostname + "\r\n\r\n";
+
+    // Send the request
     int status = send(sockfd, request.c_str(), request.size(), 0);
+
+    // Check for errors
     if (status == -1)
     {
         std::cerr << "Error sending request" << std::endl;
         return false;
     }
+
+    // Request sent successfully
     return true;
 }
 
-void ReadResponse(int sockfd, std::string& header, char*& content, size_t& content_size, bool& binary)
-{
-    char buffer[BUFFER_SIZE];
-    char* temp = NULL;
-    size_t bytes_content = 0;
-    bool content_len = false;
-    binary = false;
-    do
-    {
-        int bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0);
-        if (bytes_received == -1)
-        {
-            std::cerr << "Error reading response" << std::endl;
-            return;
-        }
-        else if (bytes_received == 0)
-        {
-            break;
-        }
-
-        if (strstr(buffer, "\r\n\r\n") != NULL)
-        {
-            size_t prefix = strstr(buffer, "\r\n\r\n") - buffer;
-            header.append(buffer, prefix);
-            if (header.find("Content-Length: ") != std::string::npos)
-            {
-                content_len = true;
-                content_size = atoi(header.substr(header.find("Content-Length: ") + 16).c_str());
-            }
-            if (header.find("Content-Type: ") != std::string::npos)
-            {
-                if (header.find("Content-Type: text") == std::string::npos)
-                {
-                    binary = true;
-                }
-            }
-            bytes_content = bytes_received - prefix - 4;
-            temp = new char[bytes_content];
-            memcpy(temp, buffer + prefix + 4, bytes_content);
-            break;
-        }
-        header.append(buffer, bytes_received);
-    } while (true);
-
-    if (content_len)
-    {
-        content = new char[content_size];
-        memcpy(content, temp, bytes_content);
-        delete[] temp;
-        while (bytes_content < content_size)
-        {
-            int bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0);
-            if (bytes_received == -1)
-            {
-                std::cerr << "Error reading response" << std::endl;
-                return;
-            }
-            memcpy(content + bytes_content, buffer, bytes_received);
-            bytes_content += bytes_received;
-        }
-    }
-    else
-    {
-        int chuckLength = strtol(temp, NULL, 16);
-        if (chuckLength == 0)
-        {
-            content = NULL;
-            content_size = 0;
-            delete[] temp;
-            return;
-        }
-        std::vector<char> v;
-        v.assign(temp, temp + bytes_content);
-        bytes_content -= (temp - strstr(temp, "\r\n\r\n")) + 4;
-
-        int bytes_received = recv(sockfd, buffer, chuckLength - bytes_content, 0);
-        if (bytes_received == -1)
-        {
-            std::cerr << "Error reading response" << std::endl;
-            return;
-        }
-        v.insert(v.end() + 1, buffer, buffer + bytes_received);
-    }
-}
-
+// Receives the response from the server and processes it
 void ReceiveResponse(int sockfd, std::string& header, std::vector<char>& content, bool& binary)
 {
     char buffer[BUFFER_SIZE] = { 0 };
     int bytes_received = 0;
     std::vector<char> temp;
     binary = false;
+
+    // Receive the response from the server
     do
     {
         bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0);
@@ -185,7 +124,9 @@ void ReceiveResponse(int sockfd, std::string& header, std::vector<char>& content
         }
 
         temp.insert(temp.end(), buffer, buffer + bytes_received);
+
         char* tempChar = temp.data();
+        // Process the response header
         if (strstr(tempChar, "\r\n\r\n") != NULL)
         {
             size_t prefix = strstr(tempChar, "\r\n\r\n") - tempChar;
@@ -195,22 +136,21 @@ void ReceiveResponse(int sockfd, std::string& header, std::vector<char>& content
 
         }
     } while (bytes_received > 0);
-
-    if (header.find("Content-Type: ") != std::string::npos)
+    // Check if the response is binary
+    if (header.find("Content-Type: ") != std::string::npos && header.find("Content-Type: text") == std::string::npos)
     {
-        if (header.find("Content-Type: text") == std::string::npos)
-        {
-            binary = true;
-        }
+        binary = true;
     }
 
-    if (temp.size() == 0)
+    // Return if the response is empty
+    if (temp.empty())
     {
         return;
     }
-
+    // Process the response content
     if (header.find("Content-Length: ") != std::string::npos)
     {
+        // Process the response content with Content-Length
         size_t content_size = strtol(header.substr(header.find("Content-Length: ") + 16).c_str(), NULL, 10);
         content = temp;
         while (content.size() < content_size)
@@ -228,6 +168,7 @@ void ReceiveResponse(int sockfd, std::string& header, std::vector<char>& content
     }
     else
     {
+        // Process the response content with Transfer-Encoding: chunked
         size_t chunkLength = 0;
         do
         {
