@@ -23,6 +23,12 @@ run:
 	make run_2
 	echo "Run with: http://exams.skule.ca/exams/ECE361H1_20191_661555510989ECE361_Lab3.pdf output/lab3.pdf"
 	make run_3
+	echo "Run with: http://anglesharp.azurewebsites.net/Chunked output/azurewebsites.html"
+	make run_4
+	echo "Run with: http://www.google.com.vn output/googlevn.html"
+	make run_5
+	echo "Run with: http://www.bing.com output/bing.html"
+	make run_6
 
 run_1: all
 	$(BUILD_DIR)/$(EXE) "www.example.com/" "output/example.html"
@@ -35,6 +41,12 @@ run_3: all
 
 run_4: all
 	$(BUILD_DIR)/$(EXE) "http://anglesharp.azurewebsites.net/Chunked" "output/azurewebsites.html" 
+
+run_5: all
+	$(BUILD_DIR)/$(EXE) "http://www.google.com.vn" "output/googlevn.html"
+
+run_6: all
+	$(BUILD_DIR)/$(EXE) "http://www.bing.com" "output/bing.html"
 
 clean:
 	rm -f $(OBJS) $(BUILD_DIR)/$(EXE)

@@ -163,7 +163,7 @@ void ReadResponse(int sockfd, std::string& header, char*& content, size_t& conte
     }
 }
 
-void Test(int sockfd, std::string& header, std::vector<char>& content, bool& binary)
+void ReceiveResponse(int sockfd, std::string& header, std::vector<char>& content, bool& binary)
 {
     char buffer[BUFFER_SIZE] = { 0 };
     int bytes_received = 0;
@@ -228,7 +228,7 @@ void Test(int sockfd, std::string& header, std::vector<char>& content, bool& bin
     }
     else
     {
-        int chunkLength = 0;
+        size_t chunkLength = 0;
         do
         {
             do
@@ -238,19 +238,20 @@ void Test(int sockfd, std::string& header, std::vector<char>& content, bool& bin
                 {
                     return;
                 }
-                if (chunkLength > temp.size() - 2)
+                char* tempChar = temp.data();
+                size_t prefix = strstr(tempChar, "\r\n") - tempChar;
+                size_t size = temp.size() - prefix - 4;
+                if (chunkLength > size)
                 {
                     break;
                 }
 
-                char* tempChar = temp.data();
-                size_t prefix = strstr(tempChar, "\r\n") - tempChar;
                 temp.erase(temp.begin(), temp.begin() + prefix + 2);
                 content.insert(content.end(), temp.begin(), temp.begin() + chunkLength);
                 temp.erase(temp.begin(), temp.begin() + chunkLength + 2);
             } while (temp.size() > 0);
 
-            int bytes_received = recv(sockfd, buffer, chunkLength, 0);
+            bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0);
             if (bytes_received == -1)
             {
                 std::cerr << "Error reading response" << std::endl;

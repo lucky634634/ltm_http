@@ -42,27 +42,9 @@ int main(int argc, char* argv[])
 
     std::string header;
     bool binary = false;
-    // char* content = NULL;
-    // size_t content_size = 0;
-    // ReadResponse(sockfd, header, content, content_size, binary);
-    // std::cout << header << std::endl;
-    // // std::cout << content_size << std::endl;
-
-    // if (binary)
-    // {
-    //     std::ofstream file(output, std::ios::binary);
-    //     file.write(content, content_size);
-    //     file.close();
-    // }
-    // else
-    // {
-    //     std::ofstream file(output);
-    //     file.write(content, content_size);
-    //     file.close();
-    // }
 
     std::vector<char> content;
-    Test(sockfd, header, content, binary);
+    ReceiveResponse(sockfd, header, content, binary);
     std::cout << header << std::endl;
     std::cout << content.size() << std::endl;
     if (binary)
