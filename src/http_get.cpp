@@ -83,7 +83,7 @@ bool ConnectSocket(int sockfd, addrinfo* result)
 bool SendRequest(int sockfd, const std::string& hostname, const std::string& path)
 {
     // Construct the HTTP request
-    std::string request = "GET " + path + " HTTP/1.1\r\nHost: " + hostname + "\r\n\r\n";
+    std::string request = "GET " + path + " HTTP/1.1\r\nHost: " + hostname + "\r\nUser-Agent: curl/8.4.0"+ "\r\n\r\n";
 
     // Send the request
     int status = send(sockfd, request.c_str(), request.size(), 0);
